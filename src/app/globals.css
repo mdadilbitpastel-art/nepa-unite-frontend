@@ -1,0 +1,224 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  NEPA Unite design system tokens — "Velura" editorial palette.
+  Warm, premium, editorial look:
+    · Ivory surfaces (#FAF5F0) on warm near-white cards.
+    · Brand / CTA: deep plum / aubergine #33203A
+    · Accent / deals: warm copper #C1764A
+    · Ink: plum-charcoal #2A2230 text, cream muted surfaces, warm borders.
+  Light theme only — no dark mode.
+  HSL channels (no hsl() wrapper) so Tailwind can apply opacity modifiers.
+*/
+@layer base {
+  :root {
+    --background: 32 38% 97%; /* warm ivory #FAF5F0 */
+    --foreground: 285 15% 17%; /* plum-charcoal #2A2230 */
+
+    --card: 36 44% 99%; /* warm near-white */
+    --card-foreground: 285 15% 17%;
+
+    --popover: 36 44% 99%;
+    --popover-foreground: 285 15% 17%;
+
+    /* Primary = deep plum (#33203A) — CTAs, links, active states */
+    --primary: 288 30% 24%;
+    --primary-foreground: 32 38% 97%;
+
+    --secondary: 30 30% 93%; /* cream page wash */
+    --secondary-foreground: 285 15% 17%;
+
+    --muted: 30 26% 93%;
+    --muted-foreground: 286 8% 42%; /* plum-grey */
+
+    --accent: 26 44% 91%; /* blush hover surface */
+    --accent-foreground: 285 15% 20%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 30 26% 87%; /* warm dividers */
+    --input: 30 26% 87%;
+    --ring: 22 55% 52%; /* copper focus */
+
+    /* Brand semantic tokens */
+    --brand: 288 30% 24%; /* deep plum #33203A */
+    --brand-foreground: 32 38% 97%;
+    --teal: 22 60% 54%; /* warm copper #C1764A — accents / deals */
+    --teal-foreground: 0 0% 100%;
+    --blush: 26 50% 91%; /* #F4E6DC soft warm panel */
+    --copper-soft: 24 60% 68%; /* #E0A07C light copper */
+    --cream: 28 30% 92%; /* #F1E9E2 */
+    --success: 145 40% 38%; /* warm green — rating / in-stock */
+    --success-foreground: 0 0% 100%;
+    --warning: 30 75% 52%; /* amber-copper */
+    --warning-foreground: 285 15% 17%;
+    --danger: 0 70% 50%;
+    --danger-foreground: 0 0% 100%;
+
+    /* Sidebar (deep plum rail for role portals) */
+    --sidebar: 288 30% 14%;
+    --sidebar-foreground: 32 30% 94%;
+    --sidebar-muted: 286 10% 62%;
+    --sidebar-accent: 22 60% 56%;
+    --sidebar-border: 288 20% 24%;
+
+    /* Chart palette — plum, copper, gold, mauve, muted-teal, red */
+    --chart-1: 288 35% 38%;
+    --chart-2: 22 60% 54%;
+    --chart-3: 38 55% 58%;
+    --chart-4: 320 28% 50%;
+    --chart-5: 180 28% 42%;
+    --chart-6: 0 65% 55%;
+
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    text-rendering: optimizeLegibility;
+  }
+  /* Editorial serif headings (Fraunces) — the signature Velura look. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-serif;
+    letter-spacing: -0.01em;
+  }
+  /* Refined focus ring */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring/70 ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 9999px;
+  }
+  .glass {
+    @apply bg-background/70 backdrop-blur-xl;
+  }
+  .gradient-text {
+    @apply bg-gradient-to-r from-brand to-teal bg-clip-text text-transparent;
+  }
+  /* Horizontal product rails: scrollable but no visible scrollbar. */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Continuous, constant-speed horizontal auto-scroll (testimonials marquee). */
+  .animate-marquee {
+    animation: marquee var(--marquee-duration, 50s) linear infinite;
+    will-change: transform;
+  }
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+/* Hero accent animations */
+.animate-floaty {
+  animation: floaty 4.5s ease-in-out infinite;
+}
+@keyframes floaty {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-pop-in {
+  animation: pop-in 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Glide in from the left and settle. */
+.animate-slide-in-left {
+  animation: slide-in-left 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes slide-in-left {
+  0% {
+    opacity: 0;
+    transform: translateX(-80px) translateY(14px) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) translateY(0) scale(1);
+  }
+}
+
+/* Glide in from the right and settle. */
+.animate-slide-in-right {
+  animation: slide-in-right 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes slide-in-right {
+  0% {
+    opacity: 0;
+    transform: translateX(70px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee,
+  .animate-floaty,
+  .animate-pop-in,
+  .animate-slide-in-left {
+    animation: none;
+  }
+}
+
+/* Uniform vertical lift on hover — all four corners rise together. */
+.card-tilt:hover {
+  transform: translateY(-8px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-tilt:hover {
+    transform: none;
+  }
+}
