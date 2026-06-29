@@ -221,9 +221,20 @@ function Hero() {
             fill
             priority
             sizes="(min-width: 1024px) 45vw, 100vw"
-            className="object-cover"
+            className="object-cover [filter:contrast(1.12)_saturate(1.2)_brightness(1.06)]"
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-primary/85 via-primary/35 to-primary/10" />
+          {/* Localized scrims — keep the product crisp & HD, darken only where text sits */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-primary/75 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-primary/70 to-transparent" />
+          {/* Soft spotlight + inner highlight for a 3D, glossy depth */}
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(120% 80% at 70% 35%, hsl(0 0% 100% / 0.18), transparent 55%)",
+            }}
+          />
+          <div className="pointer-events-none absolute inset-0 rounded-3xl shadow-[inset_0_1px_0_hsl(0_0%_100%/0.25),inset_0_-30px_60px_hsl(288_40%_10%/0.35)]" />
           <Link
             href="/products"
             aria-label="View all products"
@@ -231,14 +242,14 @@ function Hero() {
           />
           {/* Brand / product label */}
           <div className="pointer-events-none absolute left-6 top-6 z-10">
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-black/80">
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/90">
               <BrandLogo colored className="size-4" />
               NEPA Unite
             </span>
-            <p className="mt-1.5 text-lg font-medium leading-tight text-black">
+            <p className="mt-1.5 text-lg font-medium leading-tight text-white">
               Aviator Chronograph
             </p>
-            <p className="mt-0.5 text-[11px] text-black/60">
+            <p className="mt-0.5 text-[11px] text-white/70">
               Model NU-2400 · Leather strap
             </p>
           </div>
