@@ -16,12 +16,15 @@ export const API_ROOT_URL =
 export const SIGNUP_URL =
   process.env.NEXT_PUBLIC_SIGNUP_URL ?? "http://localhost:8000/signup/";
 
-/** Landing route per role after login. */
+/**
+ * Landing route after login. This is a public storefront with no role
+ * dashboards, so every role lands on the home page.
+ */
 export const ROLE_HOME: Record<Role, string> = {
-  buyer: "/buyer",
-  seller: "/seller",
-  admin: "/admin",
-  auditor: "/auditor",
+  buyer: "/",
+  seller: "/",
+  admin: "/",
+  auditor: "/",
 };
 
 export const ROLE_LABEL: Record<Role, string> = {
@@ -34,12 +37,12 @@ export const ROLE_LABEL: Record<Role, string> = {
 // ─── Status → badge variant mapping ──────────────────────────────────
 export const ORDER_STATUS_VARIANT: Record<
   OrderStatus,
-  "default" | "info" | "success" | "warning" | "danger" | "muted"
+  "default" | "info" | "success" | "warning" | "danger" | "muted" | "teal"
 > = {
   draft: "muted",
   confirmed: "info",
   fulfillment: "warning",
-  shipped: "info",
+  shipped: "teal",
   delivered: "success",
   closed: "default",
   cancelled: "danger",

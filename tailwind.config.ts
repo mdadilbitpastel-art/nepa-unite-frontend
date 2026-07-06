@@ -63,6 +63,10 @@ const config: Config = {
           DEFAULT: "hsl(var(--teal))",
           foreground: "hsl(var(--teal-foreground))",
         },
+        gold: {
+          DEFAULT: "hsl(var(--gold))",
+          foreground: "hsl(var(--gold-foreground))",
+        },
         blush: "hsl(var(--blush))",
         "copper-soft": "hsl(var(--copper-soft))",
         cream: "hsl(var(--cream))",
@@ -112,6 +116,7 @@ const config: Config = {
         elevated:
           "0 4px 6px -1px rgb(15 23 42 / 0.06), 0 12px 28px -8px rgb(15 23 42 / 0.12)",
         glow: "0 0 0 1px hsl(var(--brand) / 0.12), 0 8px 24px -6px hsl(var(--brand) / 0.25)",
+        "glow-gold": "0 6px 18px -6px hsl(32 74% 50% / 0.5)",
       },
       keyframes: {
         "accordion-down": {
@@ -149,6 +154,10 @@ const config: Config = {
           "linear-gradient(135deg, hsl(var(--brand)) 0%, hsl(288 32% 36%) 100%)",
         "teal-gradient":
           "linear-gradient(135deg, hsl(var(--brand)) 0%, hsl(var(--teal)) 100%)",
+        // Logo copper-ring gradient (#C1764A) for CTAs — anchored on the logo
+        // copper and deepening slightly so white label text stays crisp.
+        "gold-gradient":
+          "linear-gradient(135deg, hsl(23 61% 54%) 0%, hsl(22 61% 49%) 50%, hsl(20 62% 44%) 100%)",
       },
     },
   },

@@ -26,6 +26,28 @@ export function useOrderPayments(orderId: string, enabled = true) {
   });
 }
 
+/** Create (or reuse) the PaymentIntent for an order — returns the client_secret. */
+export function useCreateIntent() {
+  return useMutation({
+    mutationFn: (orderId: string) => paymentService.createIntent(orderId),
+    onError: (e: ApiError) => toast.error(e.message),
+  });
+}
+
+/** Reconcile the order with Stripe after payment; refreshes order + payment caches. */
+export function useSyncPayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (orderId: string) => paymentService.sync(orderId),
+    onSuccess: (_data, orderId) => {
+      qc.invalidateQueries({ queryKey: qk.payments(orderId) });
+      qc.invalidateQueries({ queryKey: qk.order(orderId) });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+    },
+    onError: (e: ApiError) => toast.error(e.message),
+  });
+}
+
 export function useOnboardSeller() {
   return useMutation({
     mutationFn: () => paymentService.onboardSeller(),

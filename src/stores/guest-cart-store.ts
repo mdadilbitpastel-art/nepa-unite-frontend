@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { toast } from "sonner";
 
 /**
  * Guest (pre-login) cart.
@@ -57,7 +58,13 @@ export const useGuestCart = create<GuestCartState>()(
           ),
         })),
       remove: (productId) =>
-        set((s) => ({ items: s.items.filter((i) => i.productId !== productId) })),
+        set((s) => {
+          const next = s.items.filter((i) => i.productId !== productId);
+          if (next.length !== s.items.length) {
+            toast.success("Item removed from cart");
+          }
+          return { items: next };
+        }),
       clear: () => set({ items: [] }),
     }),
     { name: "nepa-guest-cart" },

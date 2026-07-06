@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Inter, Fraunces } from "next/font/google";
 import { Providers } from "@/providers";
+import { NavigationProgress } from "@/components/shared/navigation-progress";
 import { APP_NAME, APP_TAGLINE } from "@/lib/constants";
 import "./globals.css";
 
@@ -44,6 +46,9 @@ export default function RootLayout({
       className={`${inter.variable} ${fraunces.variable}`}
     >
       <body className="min-h-screen bg-background font-sans">
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         <Providers>{children}</Providers>
       </body>
     </html>

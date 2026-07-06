@@ -12,6 +12,7 @@ import {
   Package,
   Heart,
   ShoppingCart,
+  Trash2,
   Minus,
   Plus,
   Store,
@@ -41,8 +42,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Price } from "@/components/shop/price";
 import { Rating } from "@/components/shop/rating";
 import { ProductRail } from "@/components/shop/product-rail";
+import { MagnifierImage } from "@/components/shop/magnifier-image";
 import { useProduct, useProductSearch } from "@/features/products/use-products";
 import { useShopAddToCart } from "@/features/cart/use-shop-cart";
+import { useCart, useRemoveCartItem } from "@/features/cart/use-cart";
+import { useGuestCart } from "@/stores/guest-cart-store";
 import { useAuth } from "@/hooks/use-auth";
 import { useUiStore } from "@/stores/ui-store";
 import {
@@ -90,6 +94,24 @@ export default function ProductDetailPage() {
   const addToWishlist = useAddToWishlist();
   const removeFromWishlist = useRemoveFromWishlist();
   const { data: wishlist } = useWishlist();
+  const { data: cart } = useCart();
+  const removeCartItem = useRemoveCartItem();
+  const guestItems = useGuestCart((s) => s.items);
+  const guestRemove = useGuestCart((s) => s.remove);
+  const cartItemId = (cart?.items ?? []).find(
+    (i) => i.product === product?.id,
+  )?.id;
+  const inCart = isAuthenticated
+    ? !!cartItemId
+    : guestItems.some((i) => i.productId === product?.id);
+
+  const removeFromCart = () => {
+    if (isAuthenticated) {
+      if (cartItemId) removeCartItem.mutate(cartItemId);
+    } else if (product) {
+      guestRemove(product.id);
+    }
+  };
   const [qty, setQty] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
 
@@ -239,14 +261,7 @@ export default function ProductDetailPage() {
           )}
           <div className="relative aspect-square flex-1 overflow-hidden rounded-2xl border bg-muted">
             {currentImage ? (
-              <Image
-                src={currentImage}
-                alt={product.name}
-                fill
-                sizes="(max-width:1024px) 100vw, 460px"
-                className="object-cover"
-                priority
-              />
+              <MagnifierImage src={currentImage} alt={product.name} />
             ) : (
               <div className="flex h-full items-center justify-center text-muted-foreground">
                 <Package className="size-16" />
@@ -265,7 +280,10 @@ export default function ProductDetailPage() {
                 </Badge>
               </Link>
             )}
-            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            <h1
+              className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
+              style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
+            >
               {product.name}
             </h1>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
@@ -345,12 +363,25 @@ export default function ProductDetailPage() {
             <Button
               variant="outline"
               size="lg"
-              className="flex-1"
+              className="group/cart flex-1"
               disabled={outOfStock}
-              loading={adding}
-              onClick={() => add(product, qty)}
+              loading={adding || removeCartItem.isPending}
+              onClick={() => (inCart ? removeFromCart() : add(product, qty))}
             >
-              <ShoppingCart className="size-4" /> Add to cart
+              {inCart ? (
+                <>
+                  <ShoppingCart className="size-4 fill-current group-hover/cart:hidden" />
+                  <Trash2 className="hidden size-4 group-hover/cart:block" />
+                  <span className="group-hover/cart:hidden">Added</span>
+                  <span className="hidden group-hover/cart:inline">
+                    Remove from cart
+                  </span>
+                </>
+              ) : (
+                <>
+                  <ShoppingCart className="size-4" /> Add to cart
+                </>
+              )}
             </Button>
             <Button
               variant="brand"
@@ -382,12 +413,27 @@ export default function ProductDetailPage() {
           {/* Trust badges */}
           <div className="grid grid-cols-3 gap-2 rounded-2xl border bg-card/50 p-3 text-center">
             {[
-              { icon: Truck, t: "Tracked delivery" },
-              { icon: ShieldCheck, t: "Secure payment" },
-              { icon: RotateCcw, t: "Verified seller" },
+              { icon: Truck, t: "Tracked delivery", tint: "bg-teal/10 text-teal" },
+              {
+                icon: ShieldCheck,
+                t: "Secure payment",
+                tint: "bg-success/10 text-success",
+              },
+              {
+                icon: RotateCcw,
+                t: "Verified seller",
+                tint: "bg-warning/10 text-warning",
+              },
             ].map((f) => (
               <div key={f.t} className="flex flex-col items-center gap-1.5">
-                <f.icon className="size-5 text-brand" />
+                <span
+                  className={cn(
+                    "grid size-9 place-items-center rounded-full",
+                    f.tint,
+                  )}
+                >
+                  <f.icon className="size-5" />
+                </span>
                 <span className="text-xs text-muted-foreground">{f.t}</span>
               </div>
             ))}

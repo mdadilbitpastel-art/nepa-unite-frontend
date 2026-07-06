@@ -71,9 +71,11 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
 export const authOptions: NextAuthOptions = {
   // Rolling 24h session — each access extends it, so 24h of inactivity logs out.
   session: { strategy: "jwt", maxAge: 24 * 60 * 60, updateAge: 60 * 60 },
+  // Auth is handled by the in-app popup (AuthDialog), not standalone pages, so
+  // any NextAuth fallback redirect just lands on the storefront home.
   pages: {
-    signIn: "/login",
-    error: "/login",
+    signIn: "/",
+    error: "/",
   },
   providers: [
     CredentialsProvider({

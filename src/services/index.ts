@@ -24,6 +24,7 @@ import type {
   Payment,
   PaymentConfig,
   PaymentIntentResponse,
+  PaymentSyncResponse,
   Product,
   ProductReview,
   ProductSearchResponse,
@@ -238,6 +239,13 @@ export const paymentService = {
   config: () => http.get<PaymentConfig>("/payments/config"),
   createIntent: (order_id: string) =>
     http.post<PaymentIntentResponse>("/payments/intent", { order_id }),
+  /**
+   * Reconcile a payment with Stripe after `confirmPayment`. Required in test
+   * mode where no webhook is configured — flips the order to Confirmed once the
+   * PaymentIntent has succeeded. Idempotent (safe to call more than once).
+   */
+  sync: (orderId: string) =>
+    http.post<PaymentSyncResponse>(`/payments/${orderId}/sync`),
   forOrder: (orderId: string) => http.get<Payment[]>(`/payments/${orderId}`),
   disburse: (order_item_id: string) =>
     http.post<void>("/payments/disburse", { order_item_id }),

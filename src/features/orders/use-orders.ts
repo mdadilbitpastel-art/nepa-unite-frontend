@@ -45,5 +45,8 @@ export function useInvoice(orderId: string, enabled = false) {
     queryKey: qk.invoice(orderId),
     queryFn: () => orderService.invoice(orderId),
     enabled: enabled && !!orderId,
+    // Fail fast so the caller can fall back to a client-side invoice without
+    // waiting through retry backoff (e.g. when object storage is unconfigured).
+    retry: false,
   });
 }

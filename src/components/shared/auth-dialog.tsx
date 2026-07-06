@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -40,6 +40,7 @@ import { ROLE_HOME } from "@/lib/constants";
 import { VERTICAL_TYPES, type Role } from "@/types";
 import { titleCase } from "@/lib/utils";
 import { useUiStore, type AuthView } from "@/stores/ui-store";
+import { useAuth } from "@/hooks/use-auth";
 
 type ForgotInput = z.infer<typeof forgotPasswordSchema>;
 type ResetInput = z.infer<typeof resetPasswordSchema>;
@@ -85,7 +86,6 @@ function LoginPanel({
       setLoading(false);
       return;
     }
-    toast.success("Welcome back!");
     onDone();
     await afterAuth();
   };
@@ -403,7 +403,18 @@ export function AuthDialog() {
   const view = useUiStore((s) => s.authView);
   const setOpen = useUiStore((s) => s.setAuthOpen);
   const setView = useUiStore((s) => s.setAuthView);
+  const { isAuthenticated } = useAuth();
   const close = () => setOpen(false);
+
+  // If the session resolves to signed-in while a sign-in / sign-up popup is
+  // open (e.g. it was opened during the brief auth-loading window on reload),
+  // close it — showing a login form to an already-authenticated user makes no
+  // sense. Forgot/reset stay open (usable while signed in, e.g. from profile).
+  useEffect(() => {
+    if (open && isAuthenticated && (view === "login" || view === "register")) {
+      setOpen(false);
+    }
+  }, [open, isAuthenticated, view, setOpen]);
   const toLogin = () => setView("login");
   const isTabs = view === "login" || view === "register";
 

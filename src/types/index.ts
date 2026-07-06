@@ -250,6 +250,12 @@ export interface PaymentIntentResponse {
   payment_intent_id: string;
 }
 
+export interface PaymentSyncResponse {
+  /** Stripe PaymentIntent status, or null when the order has no intent yet. */
+  payment_intent_status: string | null;
+  order_status: OrderStatus;
+}
+
 // ─── Commissions ─────────────────────────────────────────────────────
 export interface Commission {
   id: UUID;

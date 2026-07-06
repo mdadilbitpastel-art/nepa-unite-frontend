@@ -2,7 +2,14 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Search, SlidersHorizontal, X, PackageSearch, Star } from "lucide-react";
+import {
+  Search,
+  SlidersHorizontal,
+  X,
+  PackageSearch,
+  Star,
+  Check,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -43,8 +50,9 @@ const RATING_OPTIONS = [4, 3, 2] as const;
 
 function FilterPanel({
   categories,
-  category,
-  setCategory,
+  selectedCategories,
+  toggleCategory,
+  clearCategories,
   brands,
   brand,
   setBrand,
@@ -60,8 +68,9 @@ function FilterPanel({
   hasFilters,
 }: {
   categories: { category: string; count?: number }[];
-  category: string;
-  setCategory: (v: string) => void;
+  selectedCategories: string[];
+  toggleCategory: (c: string) => void;
+  clearCategories: () => void;
   brands: { brand: string; count?: number }[];
   brand: string;
   setBrand: (v: string) => void;
@@ -92,36 +101,51 @@ function FilterPanel({
         )}
       </div>
 
-      {/* Category */}
+      {/* Category (multi-select) */}
       <div className="space-y-2">
         <p className="text-sm font-semibold">Category</p>
         <div className="max-h-56 space-y-0.5 overflow-y-auto pr-1 scrollbar-thin">
           <button
-            onClick={() => setCategory("")}
+            onClick={clearCategories}
             className={cn(
               "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent",
-              !category && "bg-accent font-semibold text-brand",
+              selectedCategories.length === 0 &&
+                "bg-accent font-semibold text-brand",
             )}
           >
             All categories
           </button>
-          {categories.map((c) => (
-            <button
-              key={c.category}
-              onClick={() => setCategory(c.category)}
-              className={cn(
-                "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent",
-                category === c.category && "bg-accent font-semibold text-brand",
-              )}
-            >
-              <span className="truncate">{titleCase(c.category)}</span>
-              {c.count !== undefined && (
-                <span className="ml-2 shrink-0 text-xs text-muted-foreground">
-                  {c.count}
+          {categories.map((c) => {
+            const checked = selectedCategories.includes(c.category);
+            return (
+              <button
+                key={c.category}
+                onClick={() => toggleCategory(c.category)}
+                aria-pressed={checked}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent",
+                  checked && "bg-accent font-semibold text-brand",
+                )}
+              >
+                <span
+                  className={cn(
+                    "grid size-4 shrink-0 place-items-center rounded border transition-colors",
+                    checked
+                      ? "border-brand bg-brand text-white"
+                      : "border-border",
+                  )}
+                >
+                  {checked && <Check className="size-3" />}
                 </span>
-              )}
-            </button>
-          ))}
+                <span className="flex-1 truncate">{titleCase(c.category)}</span>
+                {c.count !== undefined && (
+                  <span className="ml-1 shrink-0 text-xs text-muted-foreground">
+                    {c.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -232,7 +256,9 @@ function CatalogContent() {
   const urlCat = urlParams.get("category") ?? "";
 
   const [search, setSearch] = useState(urlQ);
-  const [category, setCategory] = useState(urlCat);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    urlCat ? urlCat.split(",").filter(Boolean) : [],
+  );
   const [brand, setBrand] = useState("");
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
@@ -248,9 +274,16 @@ function CatalogContent() {
     setPage(1);
   }, [urlQ]);
   useEffect(() => {
-    setCategory(urlCat);
+    setSelectedCategories(urlCat ? urlCat.split(",").filter(Boolean) : []);
     setPage(1);
   }, [urlCat]);
+
+  const catParam = selectedCategories.join(",");
+  const toggleCategory = (c: string) =>
+    setSelectedCategories((prev) =>
+      prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c],
+    );
+  const clearCategories = () => setSelectedCategories([]);
 
   const debouncedSearch = useDebounce(search, 350);
   const debouncedMin = useDebounce(priceMin, 350);
@@ -272,7 +305,7 @@ function CatalogContent() {
   const params = useMemo(
     () => ({
       q: debouncedSearch || undefined,
-      category: category || undefined,
+      category: catParam || undefined,
       brand: brand || undefined,
       price_min: debouncedMin ? Number(debouncedMin) : undefined,
       price_max: debouncedMax ? Number(debouncedMax) : undefined,
@@ -284,7 +317,7 @@ function CatalogContent() {
     }),
     [
       debouncedSearch,
-      category,
+      catParam,
       brand,
       debouncedMin,
       debouncedMax,
@@ -299,7 +332,7 @@ function CatalogContent() {
 
   const hasFilters =
     !!search ||
-    !!category ||
+    selectedCategories.length > 0 ||
     !!brand ||
     !!priceMin ||
     !!priceMax ||
@@ -308,7 +341,7 @@ function CatalogContent() {
 
   const resetFilters = () => {
     setSearch("");
-    setCategory("");
+    setSelectedCategories([]);
     setBrand("");
     setPriceMin("");
     setPriceMax("");
@@ -320,14 +353,15 @@ function CatalogContent() {
   // Reset to page 1 when any filter (not the page) changes.
   useEffect(() => {
     setPage(1);
-  }, [debouncedMin, debouncedMax, minRating, inStock, category, brand, sort]);
+  }, [debouncedMin, debouncedMax, minRating, inStock, catParam, brand, sort]);
 
   const results = data?.results ?? [];
   const total = data?.count ?? results.length;
   const filterProps = {
     categories: categories ?? [],
-    category,
-    setCategory,
+    selectedCategories,
+    toggleCategory,
+    clearCategories,
     brands: brands ?? [],
     brand,
     setBrand,
@@ -348,8 +382,8 @@ function CatalogContent() {
       {/* Title + search */}
       <div className="mb-5">
         <h1 className="text-2xl font-bold tracking-tight">
-          {category
-            ? titleCase(category)
+          {selectedCategories.length === 1
+            ? titleCase(selectedCategories[0])
             : search
               ? `Results for “${search}”`
               : "All products"}

@@ -10,9 +10,9 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-soft hover:bg-primary/90",
+          "bg-gold-gradient text-gold-foreground shadow-soft [text-shadow:0_1px_2px_rgb(0_0_0/0.25)] hover:brightness-[1.05] hover:shadow-glow-gold",
         brand:
-          "bg-brand text-brand-foreground shadow-soft hover:bg-brand/90",
+          "bg-gold-gradient text-gold-foreground shadow-soft [text-shadow:0_1px_2px_rgb(0_0_0/0.25)] hover:brightness-[1.05] hover:shadow-glow-gold",
         teal: "bg-teal text-teal-foreground shadow-soft hover:bg-teal/90",
         destructive:
           "bg-destructive text-destructive-foreground shadow-soft hover:bg-destructive/90",

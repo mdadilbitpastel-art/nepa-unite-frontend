@@ -11,11 +11,14 @@ import {
   Package,
   ArrowRight,
   Lock,
+  Tag,
+  X,
 } from "lucide-react";
 import { CartSkeleton, ErrorState } from "@/components/shared/states";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Price } from "@/components/shop/price";
 import {
@@ -27,7 +30,15 @@ import {
 import { useGuestCart, guestCartSubtotal } from "@/stores/guest-cart-store";
 import { useUiStore } from "@/stores/ui-store";
 import { useAuth } from "@/hooks/use-auth";
-import { mediaUrl } from "@/lib/utils";
+import { formatCurrency, mediaUrl } from "@/lib/utils";
+
+/** Estimated tax rate shown in the cart breakdown (finalised at checkout). */
+const TAX_RATE = 0.08;
+/** Demo coupons applied client-side in the cart summary. */
+const COUPONS: Record<string, { label: string; rate?: number; amount?: number }> = {
+  SAVE10: { label: "10% off", rate: 0.1 },
+  WELCOME5: { label: "$5 off", amount: 5 },
+};
 
 interface CartRow {
   id: string;
@@ -62,7 +73,37 @@ function CartView({
   checkoutNote?: React.ReactNode;
 }) {
   const [clearOpen, setClearOpen] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState<string | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
   const count = rows.reduce((n, r) => n + r.quantity, 0);
+
+  const applied = coupon ? COUPONS[coupon] : null;
+  const discount = applied
+    ? applied.rate
+      ? subtotal * applied.rate
+      : Math.min(applied.amount ?? 0, subtotal)
+    : 0;
+  const taxable = Math.max(0, subtotal - discount);
+  const tax = taxable * TAX_RATE;
+  const total = taxable + tax;
+
+  const applyCoupon = () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    if (COUPONS[code]) {
+      setCoupon(code);
+      setCouponError(null);
+      setCouponInput("");
+    } else {
+      setCoupon(null);
+      setCouponError("That code isn't valid.");
+    }
+  };
+  const removeCoupon = () => {
+    setCoupon(null);
+    setCouponError(null);
+  };
 
   if (rows.length === 0) {
     return (
@@ -189,29 +230,95 @@ function CartView({
               <CardTitle className="text-base">Order summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">
-                  Subtotal ({count} item{count === 1 ? "" : "s"})
-                </span>
-                <span className="font-medium">
-                  <Price value={subtotal} />
-                </span>
+              {/* Coupon */}
+              {applied ? (
+                <div className="flex items-center justify-between rounded-lg border border-teal/30 bg-teal/[0.06] px-3 py-2">
+                  <span className="flex items-center gap-2 text-sm font-medium text-teal">
+                    <Tag className="size-4" />
+                    {coupon} · {applied.label}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={removeCoupon}
+                    aria-label="Remove coupon"
+                    className="text-muted-foreground transition-colors hover:text-danger"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="flex gap-2">
+                    <Input
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          applyCoupon();
+                        }
+                      }}
+                      placeholder="Coupon code (e.g. SAVE10)"
+                      aria-label="Coupon code"
+                    />
+                    <Button
+                      variant="outline"
+                      className="shrink-0"
+                      onClick={applyCoupon}
+                      disabled={!couponInput.trim()}
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                  {couponError && (
+                    <p className="text-xs text-danger">{couponError}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Price breakdown */}
+              <div className="space-y-2.5 border-t pt-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    Subtotal ({count} item{count === 1 ? "" : "s"})
+                  </span>
+                  <span className="font-medium">
+                    <Price value={subtotal} />
+                  </span>
+                </div>
+                {discount > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      Discount ({coupon})
+                    </span>
+                    <span className="font-medium text-teal">
+                      −{formatCurrency(discount)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Estimated tax</span>
+                  <span className="font-medium">{formatCurrency(tax)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Shipping</span>
+                  <span className="text-muted-foreground">
+                    Calculated at checkout
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Shipping</span>
-                <span className="text-muted-foreground">
-                  Calculated at checkout
-                </span>
-              </div>
+
               <div className="flex items-center justify-between border-t pt-4">
                 <span className="font-semibold">Total</span>
-                <Price value={subtotal} size="lg" />
+                <Price value={total} size="lg" />
               </div>
-              {checkout}
-              {checkoutNote}
+
+              {/* Actions — Proceed to checkout sits at the bottom */}
               <Button asChild variant="outline" className="w-full">
                 <Link href="/products">Continue shopping</Link>
               </Button>
+              {checkout}
+              {checkoutNote}
             </CardContent>
           </Card>
         </div>
@@ -267,11 +374,22 @@ function AuthedCart() {
       onRemove={(row) => remove.mutate(row.id)}
       onClear={() => clear.mutate()}
       checkout={
-        <Button asChild variant="brand" size="lg" className="w-full">
-          <Link href="/buyer/checkout">
-            Proceed to checkout <ArrowRight className="size-4" />
+        <Button
+          asChild
+          variant="brand"
+          size="lg"
+          className="w-full"
+          disabled={rows.length === 0}
+        >
+          <Link href="/checkout">
+            <Lock className="size-4" /> Proceed to checkout
           </Link>
         </Button>
+      }
+      checkoutNote={
+        <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
+          <Lock className="size-3" /> Secure payment powered by Stripe
+        </p>
       }
     />
   );
@@ -307,14 +425,15 @@ function GuestCart() {
           variant="brand"
           size="lg"
           className="w-full"
-          onClick={() => openAuth("login", "/buyer/checkout")}
+          disabled={rows.length === 0}
+          onClick={() => openAuth("login", "/checkout")}
         >
-          <Lock className="size-4" /> Sign in to check out
+          <Lock className="size-4" /> Sign in to checkout
         </Button>
       }
       checkoutNote={
         <p className="text-center text-xs text-muted-foreground">
-          Your cart is saved. Sign in only when you're ready to pay.
+          Sign in or create an account to complete your purchase securely.
         </p>
       }
     />

@@ -5,17 +5,18 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   ShoppingCart,
-  Heart,
   User,
-  LayoutDashboard,
+  UserCog,
+  Package,
+  Heart,
   ChevronDown,
   Store,
+  LogOut,
 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -24,12 +25,15 @@ import { useAuth } from "@/hooks/use-auth";
 import { useCart } from "@/features/cart/use-cart";
 import { useGuestCart, guestCartCount } from "@/stores/guest-cart-store";
 import { useUiStore } from "@/stores/ui-store";
-import { ROLE_HOME, ROLE_LABEL, SIGNUP_URL } from "@/lib/constants";
+import { useProfileStore, fullNameFrom } from "@/stores/profile-store";
+import { SIGNUP_URL } from "@/lib/constants";
+import { cn, initials as toInitials } from "@/lib/utils";
 
 /** Primary storefront navigation — the tab bar under the header search row. */
 const NAV_LINKS = [
   { label: "Home", href: "/" },
   { label: "All Products", href: "/products" },
+  { label: "Collections", href: "/collections" },
   { label: "Guides", href: "/#guides" },
   { label: "FAQ", href: "/#faq" },
   { label: "Our Story", href: "/#story" },
@@ -125,8 +129,31 @@ function CartCount() {
 }
 
 function AccountMenu() {
-  const { isAuthenticated, user, role, signOut } = useAuth();
+  const { isAuthenticated, isLoading, user, signOut } = useAuth();
   const openAuth = useUiStore((s) => s.openAuth);
+  const profile = useProfileStore((s) => s.profile);
+  const hydrateProfile = useProfileStore((s) => s.hydrate);
+  const userId = user?.id;
+
+  // Pull the saved name/avatar for this user so the menu shows their name.
+  useEffect(() => {
+    if (userId) hydrateProfile(userId);
+  }, [userId, hydrateProfile]);
+
+  // While the session is still resolving (a second or two on reload) show a
+  // neutral placeholder — NOT the "Sign in" button, which would be wrong if the
+  // user is actually signed in and causes a flash + a stray login popup.
+  if (isLoading) {
+    return (
+      <div
+        aria-hidden
+        className="flex items-center gap-1.5 rounded-full border border-black/[0.06] bg-card py-1 pl-1 pr-2"
+      >
+        <span className="size-7 animate-pulse rounded-full bg-muted" />
+        <span className="hidden h-3 w-10 animate-pulse rounded bg-muted sm:block" />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -141,49 +168,123 @@ function AccountMenu() {
     );
   }
 
+  const savedName = fullNameFrom(profile);
+  const displayName = savedName || (user?.email?.split("@")[0] ?? "Account");
+  const initials = toInitials(savedName || user?.email || "U");
+  const avatarUrl = profile.avatar;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="flex items-center gap-1.5 rounded-full border border-border bg-card py-1 pl-1 pr-2 transition-colors hover:bg-muted"
+          aria-label="Account menu"
+          className="group flex items-center gap-1.5 rounded-full border border-transparent bg-card py-1 pl-1 pr-2 transition-colors hover:bg-muted focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=open]:bg-muted"
         >
-          <span className="flex size-7 items-center justify-center rounded-full bg-gradient-to-br from-brand to-teal text-xs font-semibold text-white">
-            {(user?.email ?? "U").slice(0, 2).toUpperCase()}
-          </span>
-          <ChevronDown className="size-4 text-muted-foreground" />
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatarUrl}
+              alt={displayName}
+              className="size-7 rounded-full object-cover"
+            />
+          ) : (
+            <span className="flex size-7 items-center justify-center rounded-full bg-gradient-to-br from-brand to-teal text-xs font-semibold text-white">
+              {initials}
+            </span>
+          )}
+          <ChevronDown className="size-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="font-normal">
-          <p className="truncate text-sm font-medium">{user?.email}</p>
-          {role && (
-            <p className="text-xs text-muted-foreground">{ROLE_LABEL[role]}</p>
+
+      {/* border-transparent + a faint dark hairline ring so the popup edge reads
+          the same on any backdrop — the default warm border glowed gold over the
+          landing hero's dark plum panel but vanished on ivory pages. */}
+      <DropdownMenuContent
+        align="end"
+        sideOffset={10}
+        className="w-64 overflow-hidden border-transparent p-0 ring-1 ring-black/[0.06]"
+      >
+        {/* Profile header */}
+        <div className="flex items-center gap-3 border-b bg-gradient-to-br from-brand/[0.08] to-teal/[0.08] px-3.5 py-2.5">
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatarUrl}
+              alt={displayName}
+              className="size-9 shrink-0 rounded-full object-cover shadow-sm ring-2 ring-background"
+            />
+          ) : (
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand to-teal text-sm font-semibold text-white shadow-sm ring-2 ring-background">
+              {initials}
+            </span>
           )}
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {role && (
-          <DropdownMenuItem asChild>
-            <Link href={ROLE_HOME[role]}>
-              <LayoutDashboard className="size-4" /> My portal
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold capitalize leading-tight text-foreground">
+              {displayName}
+            </p>
+            {savedName && (
+              <p className="truncate text-xs text-muted-foreground">
+                {user?.email}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Account links */}
+        <div className="p-1">
+          <DropdownMenuItem asChild className="gap-2.5 py-1.5 [&_svg]:text-brand">
+            <Link href="/account/profile">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand/10">
+                <UserCog className="size-4" />
+              </span>
+              <span className="text-sm font-medium">Profile</span>
             </Link>
           </DropdownMenuItem>
-        )}
-        <DropdownMenuItem asChild>
-          <Link href="/buyer/orders">My orders</Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/buyer/wishlist">Wishlist</Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => signOut()}>Sign out</DropdownMenuItem>
+          <DropdownMenuItem asChild className="gap-2.5 py-1.5 [&_svg]:text-brand">
+            <Link href="/account/orders">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand/10">
+                <Package className="size-4" />
+              </span>
+              <span className="text-sm font-medium">My orders</span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild className="gap-2.5 py-1.5 [&_svg]:text-brand">
+            <Link href="/account/wishlist">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand/10">
+                <Heart className="size-4" />
+              </span>
+              <span className="text-sm font-medium">Favourites</span>
+            </Link>
+          </DropdownMenuItem>
+        </div>
+
+        <DropdownMenuSeparator className="my-0" />
+
+        {/* Sign out */}
+        <div className="p-1">
+          <DropdownMenuItem
+            onClick={() => signOut()}
+            className="gap-2.5 py-1.5 text-danger focus:bg-danger/10 focus:text-danger [&_svg]:text-danger"
+          >
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-danger/10">
+              <LogOut className="size-4" />
+            </span>
+            <span className="text-sm font-medium">Sign out</span>
+          </DropdownMenuItem>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
 export function StorefrontHeader() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  const pathname = usePathname();
+  const onCart = pathname === "/cart";
+  // Only treat the user as a guest once the session has actually resolved, so
+  // guest-only CTAs (e.g. "Sell") don't flash during the reload auth window.
+  const isGuest = !isLoading && !isAuthenticated;
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur-xl">
@@ -202,19 +303,16 @@ export function StorefrontHeader() {
         {/* Actions */}
         <div className="ml-auto flex items-center gap-2 lg:ml-0">
           {/* Icon utilities */}
-          {isAuthenticated && (
-            <Link
-              href="/buyer/wishlist"
-              aria-label="Wishlist"
-              className="hidden size-10 place-items-center rounded-full border border-border bg-card text-foreground transition-colors hover:border-brand/40 hover:text-brand sm:grid"
-            >
-              <Heart className="size-[1.15rem]" />
-            </Link>
-          )}
           <Link
             href="/cart"
             aria-label="Cart"
-            className="relative grid size-10 place-items-center rounded-full border border-border bg-card text-foreground transition-colors hover:border-brand/40 hover:text-brand"
+            aria-current={onCart ? "page" : undefined}
+            className={cn(
+              "relative grid size-10 place-items-center rounded-full border transition-colors focus-visible:ring-brand/60",
+              onCart
+                ? "border-brand bg-brand/10 text-brand"
+                : "border-black/[0.06] bg-card text-foreground hover:border-brand/40 hover:text-brand",
+            )}
           >
             <ShoppingCart className="size-[1.15rem]" />
             <CartCount />
@@ -223,14 +321,16 @@ export function StorefrontHeader() {
           {/* Divider between utilities and the CTA buttons */}
           <span className="mx-0.5 hidden h-6 w-px bg-border sm:block" />
 
-          {/* CTA buttons */}
-          <a
-            href={SIGNUP_URL}
-            className="hidden items-center gap-1.5 whitespace-nowrap rounded-full border-[1.5px] border-teal px-4 py-2 text-sm font-semibold text-teal transition-colors hover:bg-teal hover:text-white lg:inline-flex"
-          >
-            <Store className="size-4" />
-            Sell
-          </a>
+          {/* CTA buttons — "Sell" is hidden once signed in */}
+          {isGuest && (
+            <a
+              href={SIGNUP_URL}
+              className="hidden items-center gap-1.5 whitespace-nowrap rounded-full border-[1.5px] border-teal px-4 py-2 text-sm font-semibold text-teal transition-colors hover:bg-teal hover:text-white lg:inline-flex"
+            >
+              <Store className="size-4" />
+              Sell
+            </a>
+          )}
           <AccountMenu />
         </div>
       </div>
@@ -239,13 +339,15 @@ export function StorefrontHeader() {
       <div className="border-t px-3 py-2 sm:px-4 lg:hidden">
         <nav className="flex items-center gap-5 overflow-x-auto">
           <NavLinks />
-          <a
-            href={SIGNUP_URL}
-            className="ml-auto inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-teal px-3.5 py-1.5 text-sm font-semibold text-white"
-          >
-            <Store className="size-4" />
-            Sell
-          </a>
+          {isGuest && (
+            <a
+              href={SIGNUP_URL}
+              className="ml-auto inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-teal px-3.5 py-1.5 text-sm font-semibold text-white"
+            >
+              <Store className="size-4" />
+              Sell
+            </a>
+          )}
         </nav>
       </div>
 

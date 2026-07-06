@@ -51,7 +51,7 @@ export function StorefrontFooter() {
   return (
     <footer className="mt-20 bg-background">
       {/* Brand accent line */}
-      <div className="h-1 w-full bg-gradient-to-r from-brand via-teal to-brand" />
+      <div className="h-0.5 w-full bg-gradient-to-r from-brand via-teal to-brand" />
 
       {/* Trust strip */}
       <div className="border-b bg-secondary/40">

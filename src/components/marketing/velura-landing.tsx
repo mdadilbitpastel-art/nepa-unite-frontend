@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { SIGNUP_URL } from "@/lib/constants";
+import { useUiStore } from "@/stores/ui-store";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "@/components/shared/brand-logo";
 import {
@@ -55,10 +56,20 @@ function Reveal({
   children,
   className,
   delay = 0,
+  from = "up",
+  duration = 700,
+  rootMargin = "0px 0px -8% 0px",
 }: {
   children: React.ReactNode;
   className?: string;
   delay?: number;
+  /** Direction/style the element animates in from while hidden. */
+  from?: "up" | "left" | "right" | "scale";
+  /** Transition duration in ms (longer = a slower, gliding entrance). */
+  duration?: number;
+  /** IntersectionObserver rootMargin — a larger negative bottom delays the
+   *  reveal until the element is more visible (not just peeking in). */
+  rootMargin?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [shown, setShown] = useState(false);
@@ -73,19 +84,26 @@ function Reveal({
           io.disconnect();
         }
       },
-      { threshold: 0.12, rootMargin: "0px 0px -8% 0px" },
+      { threshold: 0.12, rootMargin },
     );
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [rootMargin]);
+
+  const hidden = {
+    up: "translate-y-8",
+    left: "-translate-x-24",
+    right: "translate-x-24",
+    scale: "scale-90",
+  }[from];
 
   return (
     <div
       ref={ref}
-      style={delay ? { transitionDelay: `${delay}ms` } : undefined}
+      style={{ transitionDuration: `${duration}ms`, transitionDelay: `${delay}ms` }}
       className={cn(
-        "transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:opacity-100",
-        shown ? "opacity-100" : "translate-y-8 opacity-0",
+        "transition-all ease-out motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:translate-x-0 motion-reduce:translate-y-0 motion-reduce:scale-100",
+        shown ? "opacity-100" : cn(hidden, "opacity-0"),
         className,
       )}
     >
@@ -185,7 +203,7 @@ function Hero() {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/products"
-              className="group inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              className="group inline-flex items-center gap-2 rounded-full bg-gold-gradient px-7 py-3.5 text-sm font-semibold text-gold-foreground shadow-soft transition-all hover:brightness-[1.04] hover:shadow-glow-gold"
             >
               View products
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
@@ -396,7 +414,7 @@ function HowItWorks() {
     },
   ];
   return (
-    <section className="bg-card py-24">
+    <section className="overflow-hidden bg-card py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto mb-14 max-w-2xl text-center">
           <Eyebrow>The method</Eyebrow>
@@ -409,28 +427,34 @@ function HowItWorks() {
           </p>
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {steps.map((s) => (
-            <div
+          {steps.map((s, i) => (
+            // Left pair slides in from the left, right pair from the right —
+            // the four cards converge toward centre as the section scrolls in.
+            <Reveal
               key={s.n}
-              className="group relative overflow-hidden rounded-3xl border bg-background p-7 transition-all card-tilt hover:shadow-elevated"
+              from={i < 2 ? "left" : "right"}
+              delay={i < 2 ? i * 120 : (3 - i) * 120}
+              className="h-full"
             >
-              {/* Oversized watermark step number */}
-              <span className="pointer-events-none absolute -right-3 -top-5 select-none text-[7rem] font-bold leading-none text-primary/[0.06] transition-colors group-hover:text-teal/10">
-                {s.n}
-              </span>
-              <span className="relative grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-primary to-teal text-white shadow-card">
-                <s.icon className="size-7" />
-              </span>
-              <span className="relative mt-6 block text-[11px] font-bold uppercase tracking-[0.12em] text-teal">
-                Step {s.n}
-              </span>
-              <h3 className="relative mt-1.5 text-lg font-medium text-foreground">
-                {s.t}
-              </h3>
-              <p className="relative mt-2 text-sm text-muted-foreground">
-                {s.d}
-              </p>
-            </div>
+              <div className="group relative flex h-full flex-col overflow-hidden rounded-3xl border bg-background p-7 transition-all card-tilt hover:shadow-elevated">
+                {/* Oversized watermark step number */}
+                <span className="pointer-events-none absolute -right-3 -top-5 select-none text-[7rem] font-bold leading-none text-primary/[0.06] transition-colors group-hover:text-teal/10">
+                  {s.n}
+                </span>
+                <span className="relative grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-primary to-teal text-white shadow-card">
+                  <s.icon className="size-7" />
+                </span>
+                <span className="relative mt-6 block text-[11px] font-bold uppercase tracking-[0.12em] text-teal">
+                  Step {s.n}
+                </span>
+                <h3 className="relative mt-1.5 text-lg font-medium text-foreground">
+                  {s.t}
+                </h3>
+                <p className="relative mt-2 text-sm text-muted-foreground">
+                  {s.d}
+                </p>
+              </div>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -487,30 +511,29 @@ function Benefits() {
           </p>
           <Link
             href="/products"
-            className="mt-7 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
+            className="mt-7 inline-flex items-center gap-2 rounded-full bg-gold-gradient px-6 py-3 text-sm font-semibold text-gold-foreground shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-glow-gold"
           >
             Start sourcing
             <ArrowRight className="size-4" />
           </Link>
         </div>
 
-        {/* Benefit rows */}
+        {/* Benefit rows — reveal one after another on first scroll-in */}
         <div className="grid gap-x-8 gap-y-2 sm:grid-cols-2">
-          {items.map((b) => (
-            <div
-              key={b.t}
-              className="flex gap-4 rounded-2xl p-4 transition-colors hover:bg-card"
-            >
-              <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-card text-primary shadow-card ring-1 ring-primary/5">
-                <b.icon className="size-6" />
-              </span>
-              <div>
-                <h3 className="text-base font-semibold text-foreground">
-                  {b.t}
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">{b.d}</p>
+          {items.map((b, i) => (
+            <Reveal key={b.t} from="up" delay={i * 130}>
+              <div className="flex gap-4 rounded-2xl p-4 transition-colors hover:bg-card">
+                <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-card text-primary shadow-card ring-1 ring-primary/5">
+                  <b.icon className="size-6" />
+                </span>
+                <div>
+                  <h3 className="text-base font-semibold text-foreground">
+                    {b.t}
+                  </h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{b.d}</p>
+                </div>
               </div>
-            </div>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -618,8 +641,8 @@ function Journey() {
               </span>
               {/* Step card */}
               <div className="mt-6 w-full rounded-2xl border bg-background p-6 transition-all card-tilt hover:shadow-elevated">
-                <span className="mx-auto grid size-12 place-items-center rounded-xl bg-blush text-primary">
-                  <s.icon className="size-6" />
+                <span className="mx-auto grid size-16 place-items-center rounded-xl bg-blush text-primary">
+                  <s.icon className="size-8" />
                 </span>
                 <span className="mt-4 block text-xs font-semibold uppercase tracking-[0.1em] text-teal">
                   {s.tag}
@@ -684,7 +707,7 @@ function ProductsSlider() {
     if (el) el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: "smooth" });
   };
   return (
-    <section className="bg-gradient-to-br from-blush/60 to-background py-24">
+    <section className="overflow-hidden bg-gradient-to-br from-blush/60 to-background py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-10 flex items-end justify-between gap-6">
           <div className="max-w-xl">
@@ -716,6 +739,9 @@ function ProductsSlider() {
           </div>
         </div>
 
+        {/* The whole rail glides in from the left like a train pulling in —
+            only once it's genuinely scrolled into view (not just peeking). */}
+        <Reveal from="left" duration={950} rootMargin="0px 0px -25% 0px">
         <div
           ref={railRef}
           className="no-scrollbar flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-2"
@@ -774,6 +800,7 @@ function ProductsSlider() {
             </span>
           </Link>
         </div>
+        </Reveal>
       </div>
     </section>
   );
@@ -804,7 +831,7 @@ function Quality() {
     },
   ];
   return (
-    <section className="bg-card py-24">
+    <section className="overflow-hidden bg-card py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto mb-14 max-w-2xl text-center">
           <Eyebrow>Built to a standard</Eyebrow>
@@ -817,21 +844,27 @@ function Quality() {
           </p>
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {items.map((q) => (
-            <div
+          {items.map((q, i) => (
+            // The middle pair slides in first (from left/right toward centre),
+            // then 800ms later the outer pair follows from the sides.
+            <Reveal
               key={q.t}
-              className="group relative overflow-hidden rounded-3xl border bg-background p-7 text-center transition-all card-tilt hover:border-teal/40 hover:shadow-elevated"
+              from={i <= 1 ? "left" : "right"}
+              delay={i === 1 || i === 2 ? 0 : 800}
+              className="h-full"
             >
-              {/* Accent bar that reveals on hover */}
-              <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-teal to-primary opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-              <span className="mx-auto grid size-16 place-items-center rounded-2xl bg-gradient-to-br from-primary to-teal text-white shadow-card transition-transform duration-300 group-hover:scale-105">
-                <q.icon className="size-8" />
-              </span>
-              <h4 className="mt-5 text-base font-semibold text-foreground">
-                {q.t}
-              </h4>
-              <p className="mt-1.5 text-sm text-muted-foreground">{q.d}</p>
-            </div>
+              <div className="group relative flex h-full flex-col overflow-hidden rounded-3xl border bg-background p-7 text-center transition-all card-tilt hover:border-teal/40 hover:shadow-elevated">
+                {/* Accent bar that reveals on hover */}
+                <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-teal to-primary opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <span className="mx-auto grid size-16 place-items-center rounded-2xl bg-gradient-to-br from-primary to-teal text-white shadow-card transition-transform duration-300 group-hover:scale-105">
+                  <q.icon className="size-8" />
+                </span>
+                <h4 className="mt-5 text-base font-semibold text-foreground">
+                  {q.t}
+                </h4>
+                <p className="mt-1.5 text-sm text-muted-foreground">{q.d}</p>
+              </div>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -994,14 +1027,22 @@ function Knowledge() {
           </Link>
         </div>
         <div className="grid gap-6 lg:grid-cols-3">
-          {posts.map((p) => (
+          {posts.map((p, i) => (
+            // Guides rise up and fade in one after another.
+            <Reveal key={p.t} from="up" delay={i * 140} className="h-full">
             <Link
-              key={p.t}
               href="/products"
-              className="group flex flex-col rounded-3xl border bg-card p-8 transition-all card-tilt hover:shadow-elevated"
+              className="group flex h-full flex-col rounded-3xl border bg-card p-8 transition-all card-tilt hover:shadow-elevated"
             >
               <div className="flex items-center justify-between">
-                <span className="grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-primary to-teal text-white shadow-card transition-transform group-hover:scale-105">
+                <span
+                  className={cn(
+                    "grid size-14 place-items-center rounded-2xl bg-gradient-to-br text-white shadow-card transition-transform group-hover:scale-105",
+                    ["from-brand to-brand/70", "from-teal to-teal/70", "from-success to-success/70"][
+                      i % 3
+                    ],
+                  )}
+                >
                   <p.icon className="size-7" />
                 </span>
                 <span className="rounded-full bg-blush px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-brand">
@@ -1022,6 +1063,7 @@ function Knowledge() {
                 <span className="text-xs text-muted-foreground">{p.read}</span>
               </div>
             </Link>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -1073,7 +1115,7 @@ function Faq() {
           </p>
           <Link
             href="/#guides"
-            className="mt-7 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
+            className="mt-7 inline-flex items-center gap-2 rounded-full bg-gold-gradient px-6 py-3 text-sm font-semibold text-gold-foreground shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-glow-gold"
           >
             Read the guides
             <ArrowRight className="size-4" />
@@ -1103,6 +1145,7 @@ function Faq() {
 
 /* --------------------------------- Story --------------------------------- */
 function Story() {
+  const openAuth = useUiStore((s) => s.openAuth);
   return (
     <section id="story" className="scroll-mt-24 bg-primary py-24 text-primary-foreground">
       <div className="mx-auto grid max-w-7xl items-center gap-16 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
@@ -1124,13 +1167,14 @@ function Story() {
             That philosophy now connects more than 1,200 suppliers and 54,000
             business buyers trading on one platform.
           </p>
-          <Link
-            href="/register"
+          <button
+            type="button"
+            onClick={() => openAuth("register")}
             className="mt-7 inline-flex items-center gap-2 rounded-full bg-teal px-7 py-3.5 text-sm font-semibold text-teal-foreground transition-transform hover:-translate-y-0.5"
           >
             Join the marketplace
             <ArrowRight className="size-4" />
-          </Link>
+          </button>
         </div>
         <Link
           href="/products"

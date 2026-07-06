@@ -26,7 +26,7 @@ export function HomeStory() {
           </p>
           <Link
             href="/products"
-            className="group mt-6 inline-flex items-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition-transform hover:-translate-y-0.5"
+            className="group mt-6 inline-flex items-center gap-2 rounded-full bg-gold-gradient px-6 py-3 text-sm font-semibold text-gold-foreground shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-glow-gold"
           >
             Start exploring
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />

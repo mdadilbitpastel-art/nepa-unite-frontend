@@ -60,7 +60,7 @@ export function useRemoveCartItem() {
     mutationFn: (itemId: string) => cartService.removeItem(itemId),
     onSuccess: (cart) => {
       qc.setQueryData(qk.cart, cart);
-      toast.success("Item removed");
+      toast.success("Item removed from cart");
     },
     onError: (e: ApiError) => toast.error(e.message),
   });
