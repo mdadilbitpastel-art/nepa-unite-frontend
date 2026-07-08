@@ -97,10 +97,8 @@ export function ReturnRequestDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="return">Return for refund</SelectItem>
-                  <SelectItem value="exchange">
-                    Exchange for the same item
-                  </SelectItem>
+                  <SelectItem value="return">Return &amp; refund</SelectItem>
+                  <SelectItem value="exchange">Replace</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
@@ -151,7 +149,7 @@ export function ReturnRequestDialog({
             Cancel
           </Button>
           <Button variant="brand" loading={create.isPending} onClick={submit}>
-            Submit {type === "exchange" ? "exchange" : "return"}
+            Submit {type === "exchange" ? "replacement" : "return"}
           </Button>
         </DialogFooter>
       </DialogContent>
