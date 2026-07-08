@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,6 +22,8 @@ import {
   RotateCcw,
   ChevronRight,
   Zap,
+  FileText,
+  ListChecks,
 } from "lucide-react";
 import { ProductDetailSkeleton, ErrorState } from "@/components/shared/states";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -114,6 +116,20 @@ export default function ProductDetailPage() {
   };
   const [qty, setQty] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
+
+  // Sticky compact bar: reveal once the main buy-box scrolls out of view.
+  const heroRef = useRef<HTMLDivElement>(null);
+  const [showBar, setShowBar] = useState(false);
+  useEffect(() => {
+    const el = heroRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => setShowBar(!entry.isIntersecting && entry.boundingClientRect.top < 0),
+      { threshold: 0, rootMargin: "-72px 0px 0px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [product?.id]);
 
   const wishlistItemId = useMemo(() => {
     return (wishlist ?? []).find((w) => {
@@ -215,9 +231,113 @@ export default function ProductDetailPage() {
   const canReview = isAuthenticated && role === "buyer";
 
   return (
-    <div className="mx-auto max-w-7xl space-y-10 px-4 py-6 sm:px-6 lg:px-8">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
+    <>
+      {/* Sticky compact bar — collapses the hero (image, title, price, qty,
+          actions) into a single row once you scroll past it. Kept OUT of the
+          content flow so it doesn't push the breadcrumb down. */}
+      <div
+        aria-hidden={!showBar}
+        className={cn(
+          "fixed inset-x-0 top-0 z-40 border-b border-brand/15 bg-card shadow-[0_12px_28px_-10px_rgba(30,58,107,0.35)] transition-all duration-[600ms] ease-in-out lg:top-16 lg:z-30",
+          showBar
+            ? "translate-y-0 opacity-100"
+            : "pointer-events-none -translate-y-full opacity-0",
+        )}
+      >
+        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:gap-4 sm:px-6 sm:py-3.5 lg:px-8">
+          <div className="relative size-12 shrink-0 overflow-hidden rounded-xl border bg-muted shadow-sm sm:size-14">
+            {currentImage ? (
+              <Image src={currentImage} alt="" fill sizes="56px" className="object-cover" />
+            ) : (
+              <div className="grid h-full place-items-center text-muted-foreground">
+                <Package className="size-6" />
+              </div>
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground sm:text-[15px]">
+              {product.name}
+            </p>
+            <div className="flex items-center gap-2">
+              <Price value={product.price} compareAt={product.mrp} size="sm" />
+              {outOfStock && (
+                <Badge variant="danger" className="hidden sm:inline-flex">
+                  Out of stock
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          {!outOfStock && (
+            <div className="hidden items-center rounded-lg border md:inline-flex">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-9 rounded-r-none"
+                disabled={qty <= minQty}
+                onClick={() => setQuantity(qty - 1)}
+                aria-label="Decrease quantity"
+              >
+                <Minus className="size-4" />
+              </Button>
+              <span className="w-10 text-center text-sm font-medium tabular-nums">
+                {qty}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-9 rounded-l-none"
+                disabled={qty >= product.inventory_count}
+                onClick={() => setQuantity(qty + 1)}
+                aria-label="Increase quantity"
+              >
+                <Plus className="size-4" />
+              </Button>
+            </div>
+          )}
+
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="group/barcart"
+              disabled={outOfStock}
+              loading={adding || removeCartItem.isPending}
+              onClick={() => (inCart ? removeFromCart() : add(product, qty))}
+            >
+              {inCart ? (
+                <>
+                  <ShoppingCart className="size-4 fill-current group-hover/barcart:hidden" />
+                  <Trash2 className="hidden size-4 group-hover/barcart:block" />
+                  <span className="hidden sm:inline">
+                    <span className="group-hover/barcart:hidden">Added</span>
+                    <span className="hidden group-hover/barcart:inline">Remove</span>
+                  </span>
+                </>
+              ) : (
+                <>
+                  <ShoppingCart className="size-4" />
+                  <span className="hidden sm:inline">Add to cart</span>
+                </>
+              )}
+            </Button>
+            <Button
+              variant="brand"
+              size="sm"
+              disabled={outOfStock}
+              onClick={buyNow}
+            >
+              <Zap className="size-4" />
+              <span className="hidden sm:inline">Buy now</span>
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 pb-12 pt-5 sm:px-6 lg:px-8">
+        {/* Breadcrumb */}
+        <nav className="mb-5 flex items-center gap-1.5 text-sm text-muted-foreground">
         <Link href="/products" className="hover:text-foreground">
           All products
         </Link>
@@ -234,9 +354,13 @@ export default function ProductDetailPage() {
         )}
         <ChevronRight className="size-3.5" />
         <span className="truncate font-medium text-foreground">{product.name}</span>
-      </nav>
+        </nav>
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,460px)_minmax(0,1fr)]">
+        <div className="space-y-10">
+        <div
+        ref={heroRef}
+        className="grid items-start gap-8 lg:grid-cols-[minmax(0,520px)_minmax(0,1fr)]"
+      >
         {/* Gallery */}
         <div className="flex gap-3 lg:sticky lg:top-36 lg:self-start">
           {gallery.length > 1 && (
@@ -259,27 +383,22 @@ export default function ProductDetailPage() {
               ))}
             </div>
           )}
-          <div className="relative aspect-square flex-1 overflow-hidden rounded-2xl border bg-muted">
-            {currentImage ? (
-              <MagnifierImage src={currentImage} alt={product.name} />
-            ) : (
-              <div className="flex h-full items-center justify-center text-muted-foreground">
-                <Package className="size-16" />
-              </div>
-            )}
+          <div className="flex-1">
+            <div className="relative aspect-square overflow-hidden rounded-2xl bg-muted">
+              {currentImage ? (
+                <MagnifierImage src={currentImage} alt={product.name} />
+              ) : (
+                <div className="flex h-full items-center justify-center text-muted-foreground">
+                  <Package className="size-16" />
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Buy box */}
         <div className="space-y-5">
           <div className="space-y-2">
-            {category && (
-              <Link href={`/products?category=${encodeURIComponent(category)}`}>
-                <Badge variant="info" className="font-normal">
-                  {titleCase(category)}
-                </Badge>
-              </Link>
-            )}
             <h1
               className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
               style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
@@ -287,6 +406,16 @@ export default function ProductDetailPage() {
               {product.name}
             </h1>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+              {category && (
+                <Link
+                  href={`/products?category=${encodeURIComponent(category)}`}
+                  className="shrink-0"
+                >
+                  <Badge variant="info" className="font-normal">
+                    {titleCase(category)}
+                  </Badge>
+                </Link>
+              )}
               <span>SKU: {product.sku}</span>
               {(product.review_count ?? reviews.length) > 0 && (
                 <Rating
@@ -298,66 +427,104 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <Price value={product.price} compareAt={product.mrp} size="xl" />
-            {outOfStock ? (
-              <Badge variant="danger">Out of stock</Badge>
-            ) : product.inventory_count <= 10 ? (
-              <Badge variant="warning">Only {product.inventory_count} left</Badge>
-            ) : (
-              <Badge variant="success">In stock</Badge>
+          {/* Purchase panel — price, stock, quantity and actions grouped into
+              one block so the buy area has no floaty vacant space. */}
+          <div className="space-y-4 rounded-2xl border bg-card p-4 shadow-card sm:p-5">
+          <div className="grid gap-5 sm:grid-cols-2 sm:items-start">
+            {/* Left: price, stock, availability and quantity */}
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <Price value={product.price} compareAt={product.mrp} size="xl" />
+                {outOfStock ? (
+                  <Badge variant="danger">Out of stock</Badge>
+                ) : product.inventory_count <= 10 ? (
+                  <Badge variant="warning">
+                    Only {product.inventory_count} left
+                  </Badge>
+                ) : (
+                  <Badge variant="success">In stock</Badge>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                <span className="text-muted-foreground">
+                  Available:{" "}
+                  <span className="font-medium text-foreground">
+                    {product.inventory_count} units
+                  </span>
+                </span>
+                <span className="text-muted-foreground">
+                  Min. order:{" "}
+                  <span className="font-medium text-foreground">{minQty}</span>
+                </span>
+              </div>
+
+              {!outOfStock && (
+                <div className="flex items-center gap-2.5">
+                  <span className="text-sm text-muted-foreground">Qty</span>
+                  <div className="inline-flex items-center rounded-lg border">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-r-none"
+                      disabled={qty <= minQty}
+                      onClick={() => setQuantity(qty - 1)}
+                      aria-label="Decrease quantity"
+                    >
+                      <Minus className="size-4" />
+                    </Button>
+                    <span className="w-12 text-center text-sm font-medium tabular-nums">
+                      {qty}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-l-none"
+                      disabled={qty >= product.inventory_count}
+                      onClick={() => setQuantity(qty + 1)}
+                      aria-label="Increase quantity"
+                    >
+                      <Plus className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right: live order summary — fills the panel's right side */}
+            {!outOfStock && (
+              <div className="rounded-xl border bg-muted/30 px-3.5 py-3">
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Order summary
+                </p>
+                <dl className="space-y-1 text-sm">
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">Unit price</dt>
+                    <dd className="font-medium text-foreground">
+                      <Price value={product.price} />
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">Quantity</dt>
+                    <dd className="font-medium tabular-nums text-foreground">
+                      {qty}
+                    </dd>
+                  </div>
+                  <div className="mt-0.5 flex items-center justify-between border-t pt-1.5">
+                    <dt className="font-semibold text-foreground">Subtotal</dt>
+                    <dd className="text-base font-bold text-foreground">
+                      <Price value={parseFloat(product.price) * qty} />
+                    </dd>
+                  </div>
+                </dl>
+              </div>
             )}
           </div>
 
-          <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-            <span className="text-muted-foreground">
-              Available:{" "}
-              <span className="font-medium text-foreground">
-                {product.inventory_count} units
-              </span>
-            </span>
-            <span className="text-muted-foreground">
-              Min. order:{" "}
-              <span className="font-medium text-foreground">{minQty}</span>
-            </span>
+          <div className="flex items-center gap-2 border-t pt-3 text-xs text-muted-foreground">
+            <Truck className="size-4 shrink-0 text-teal" />
+            <span>Free tracked delivery · Dispatched in 1–2 business days</span>
           </div>
-
-          {/* Quantity + actions */}
-          {!outOfStock && (
-            <div className="flex items-center gap-3">
-              <div className="inline-flex items-center rounded-lg border">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-r-none"
-                  disabled={qty <= minQty}
-                  onClick={() => setQuantity(qty - 1)}
-                  aria-label="Decrease quantity"
-                >
-                  <Minus className="size-4" />
-                </Button>
-                <span className="w-12 text-center text-sm font-medium tabular-nums">
-                  {qty}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-l-none"
-                  disabled={qty >= product.inventory_count}
-                  onClick={() => setQuantity(qty + 1)}
-                  aria-label="Increase quantity"
-                >
-                  <Plus className="size-4" />
-                </Button>
-              </div>
-              <span className="text-sm text-muted-foreground">
-                Subtotal:{" "}
-                <span className="font-semibold text-foreground">
-                  <Price value={parseFloat(product.price) * qty} />
-                </span>
-              </span>
-            </div>
-          )}
 
           <div className="flex flex-col gap-2.5 sm:flex-row">
             <Button
@@ -409,6 +576,7 @@ export default function ProductDetailPage() {
               </Button>
             )}
           </div>
+          </div>
 
           {/* Trust badges */}
           <div className="grid grid-cols-3 gap-2 rounded-2xl border bg-card/50 p-3 text-center">
@@ -439,27 +607,55 @@ export default function ProductDetailPage() {
             ))}
           </div>
 
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="justify-start px-0 text-muted-foreground"
-          >
-            <Link href={`/products?seller=${product.seller}`}>
-              <Store className="size-4" /> View seller storefront
-            </Link>
-          </Button>
+          {/* Sold by — seller storefront identity */}
+          <div className="flex items-center gap-3 rounded-2xl border bg-card/50 p-3">
+            <div className="relative grid size-11 shrink-0 place-items-center overflow-hidden rounded-full border bg-muted">
+              {product.seller_logo_url ? (
+                <Image
+                  src={mediaUrl(product.seller_logo_url) ?? product.seller_logo_url}
+                  alt={product.seller_name ?? "Seller"}
+                  fill
+                  sizes="44px"
+                  className="object-cover"
+                />
+              ) : (
+                <Store className="size-5 text-muted-foreground" />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground">Sold by</p>
+              <p className="truncate text-sm font-semibold text-foreground">
+                {product.seller_name || "Verified seller"}
+              </p>
+            </div>
+            <Button asChild variant="outline" size="sm">
+              <Link
+                href={
+                  product.seller_name
+                    ? `/products?brand=${encodeURIComponent(product.seller_name)}`
+                    : "/products"
+                }
+              >
+                Visit store
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Description & specs */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="space-y-6">
         {product.description && (
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-base">Product description</CardTitle>
+          <Card className="overflow-hidden shadow-card">
+            <CardHeader className="flex-row items-center gap-3 space-y-0 border-b bg-gradient-to-r from-success/15 to-transparent py-4">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-success/15 text-success ring-1 ring-success/20">
+                <FileText className="size-[1.15rem]" />
+              </span>
+              <CardTitle className="text-base font-semibold text-success">
+                Product description
+              </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
                 {product.description}
               </p>
@@ -467,21 +663,24 @@ export default function ProductDetailPage() {
           </Card>
         )}
 
-        <Card className={cn(!product.description && "lg:col-span-3")}>
-          <CardHeader>
-            <CardTitle className="text-base">Specifications</CardTitle>
+        <Card className="overflow-hidden shadow-card">
+          <CardHeader className="flex-row items-center gap-3 space-y-0 border-b bg-gradient-to-r from-teal/10 to-transparent py-4">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-teal/15 text-teal ring-1 ring-teal/20">
+              <ListChecks className="size-[1.15rem]" />
+            </span>
+            <CardTitle className="text-base font-semibold">Specifications</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             {specs.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No specifications provided.
               </p>
             ) : (
-              <dl className="divide-y text-sm">
+              <dl className="grid grid-cols-1 gap-x-10 text-sm sm:grid-cols-2 lg:grid-cols-3">
                 {specs.map(([key, value]) => (
                   <div
                     key={key}
-                    className="flex justify-between gap-4 py-2 first:pt-0 last:pb-0"
+                    className="flex items-baseline justify-between gap-4 border-b border-border/60 py-2.5"
                   >
                     <dt className="text-muted-foreground">
                       {titleCase(key.replace(/_/g, " "))}
@@ -495,10 +694,49 @@ export default function ProductDetailPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Return & exchange policy */}
+        <Card className="overflow-hidden shadow-card">
+          <CardHeader className="flex-row items-center gap-3 space-y-0 border-b bg-gradient-to-r from-warning/10 to-transparent py-4">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-warning/15 text-warning ring-1 ring-warning/20">
+              <RotateCcw className="size-[1.15rem]" />
+            </span>
+            <CardTitle className="text-base font-semibold">
+              Return &amp; exchange policy
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 pt-6 text-sm text-muted-foreground">
+            {product.is_returnable ? (
+              <p className="flex items-start gap-2">
+                <RotateCcw className="mt-0.5 size-4 shrink-0 text-success" />
+                <span>
+                  Easy returns within{" "}
+                  <span className="font-semibold text-foreground">
+                    {product.return_window_days ?? 7} days
+                  </span>{" "}
+                  of delivery.
+                </span>
+              </p>
+            ) : (
+              <p>This item is not eligible for return.</p>
+            )}
+            {product.is_exchangeable && (
+              <p className="flex items-start gap-2">
+                <RotateCcw className="mt-0.5 size-4 shrink-0 text-teal" />
+                <span>Exchange available within the return window.</span>
+              </p>
+            )}
+            {product.return_policy_note && (
+              <p className="whitespace-pre-line border-t pt-2">
+                {product.return_policy_note}
+              </p>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Reviews */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-base">
@@ -632,6 +870,8 @@ export default function ProductDetailPage() {
 
       {/* Similar products */}
       <SimilarProducts category={category} excludeId={id} />
-    </div>
+        </div>
+      </div>
+    </>
   );
 }

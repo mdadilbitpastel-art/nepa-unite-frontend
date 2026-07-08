@@ -94,9 +94,10 @@ function FilterPanel({
         {hasFilters && (
           <button
             onClick={onClear}
-            className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
+            className="group inline-flex items-center gap-1.5 rounded-full border border-brand/20 bg-brand/5 py-1 pl-2 pr-2.5 text-xs font-semibold text-brand transition-colors hover:border-brand/40 hover:bg-brand/10"
           >
-            <X className="size-3.5" /> Clear all
+            <X className="size-3.5 transition-transform group-hover:rotate-90" />
+            Clear all
           </button>
         )}
       </div>
@@ -254,12 +255,13 @@ function CatalogContent() {
   const urlParams = useSearchParams();
   const urlQ = urlParams.get("q") ?? "";
   const urlCat = urlParams.get("category") ?? "";
+  const urlBrand = urlParams.get("brand") ?? "";
 
   const [search, setSearch] = useState(urlQ);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
     urlCat ? urlCat.split(",").filter(Boolean) : [],
   );
-  const [brand, setBrand] = useState("");
+  const [brand, setBrand] = useState(urlBrand);
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
   const [minRating, setMinRating] = useState(0);
@@ -277,6 +279,11 @@ function CatalogContent() {
     setSelectedCategories(urlCat ? urlCat.split(",").filter(Boolean) : []);
     setPage(1);
   }, [urlCat]);
+  // Deep-link from a seller's "Visit store": pre-select their brand filter.
+  useEffect(() => {
+    setBrand(urlBrand);
+    setPage(1);
+  }, [urlBrand]);
 
   const catParam = selectedCategories.join(",");
   const toggleCategory = (c: string) =>
@@ -357,12 +364,19 @@ function CatalogContent() {
 
   const results = data?.results ?? [];
   const total = data?.count ?? results.length;
+  // Ensure the active brand (e.g. deep-linked from a seller store) is always
+  // present in the list so it renders as selected even if it has no facet count.
+  const brandList = brands ?? [];
+  const mergedBrands =
+    brand && !brandList.some((b) => b.brand === brand)
+      ? [{ brand }, ...brandList]
+      : brandList;
   const filterProps = {
     categories: categories ?? [],
     selectedCategories,
     toggleCategory,
     clearCategories,
-    brands: brands ?? [],
+    brands: mergedBrands,
     brand,
     setBrand,
     priceMin,

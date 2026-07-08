@@ -29,6 +29,10 @@ import type {
   ProductReview,
   ProductSearchResponse,
   RegisterResponse,
+  ReturnReason,
+  ReturnRequest,
+  ReturnStatus,
+  ReturnType,
   Role,
   VerticalType,
   WishlistItem,
@@ -232,6 +236,24 @@ export const orderService = {
     http.patch<Order>(`/orders/${id}/status/`, { status }),
   invoice: (orderId: string) =>
     http.get<Invoice>(`/orders/${orderId}/invoice`),
+};
+
+export const returnService = {
+  list: (params?: Record<string, unknown>) =>
+    http.get<ReturnRequest[]>(`/returns/${toQuery(params ?? {})}`),
+  get: (id: string) => http.get<ReturnRequest>(`/returns/${id}/`),
+  create: (body: {
+    order_item: string;
+    type: ReturnType;
+    reason: ReturnReason;
+    reason_note?: string;
+    quantity?: number;
+    exchange_product?: string | null;
+  }) => http.post<ReturnRequest>("/returns/", body),
+  updateStatus: (
+    id: string,
+    body: { status: ReturnStatus; note?: string; pickup_scheduled_at?: string },
+  ) => http.patch<ReturnRequest>(`/returns/${id}/status/`, body),
 };
 
 // ─── Payments ────────────────────────────────────────────────────────

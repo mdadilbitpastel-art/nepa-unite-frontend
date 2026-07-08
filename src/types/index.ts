@@ -134,6 +134,14 @@ export interface Product {
   status: ProductStatus;
   primary_image_url?: string | null;
   images?: ProductImage[];
+  /** Seller storefront identity (the tenant), annotated by the detail API. */
+  seller_name?: string | null;
+  seller_logo_url?: string | null;
+  /** Return / exchange policy, seller-set during add/edit. */
+  is_returnable?: boolean;
+  return_window_days?: number;
+  is_exchangeable?: boolean;
+  return_policy_note?: string;
   /** Aggregate review rating (0–5) and number of reviews, annotated by the API. */
   rating_avg?: number;
   review_count?: number;
@@ -201,9 +209,49 @@ export interface OrderItem {
   product: UUID;
   product_name?: string;
   seller: UUID;
+  /** Seller storefront/business name, annotated by the API. */
+  seller_name?: string | null;
   quantity: number;
   unit_price: DecimalString;
   fulfillment_status: FulfillmentStatus;
+  /** Return/exchange policy + live eligibility, annotated by the order API. */
+  is_returnable?: boolean;
+  is_exchangeable?: boolean;
+  return_window_days?: number;
+  return_eligible?: boolean;
+  active_return?: {
+    id: UUID;
+    type: ReturnType;
+    status: ReturnStatus;
+    status_display: string;
+  } | null;
+  /** Every return/exchange ever raised on this item, newest first. */
+  return_history?: ReturnHistoryEntry[];
+}
+
+/** Compact summary of one past return/exchange on an order item. */
+export interface ReturnHistoryEntry {
+  id: UUID;
+  type: ReturnType;
+  status: ReturnStatus;
+  status_display: string;
+  refund_amount: DecimalString;
+  created_at: ISODate;
+}
+
+/**
+ * The single status a list row should show. `kind` is "order" before delivery;
+ * once delivered/closed with a return/exchange in flight it becomes
+ * "return"/"exchange" and `code`/`label` describe that request instead.
+ */
+export interface OrderDisplayStatus {
+  code: OrderStatus | ReturnStatus;
+  label: string;
+  /** Self-contained single-badge label, e.g. "Exchange requested". */
+  full_label: string;
+  kind: "order" | ReturnType;
+  return_id: UUID | null;
+  order_status: OrderStatus;
 }
 
 export interface Order {
@@ -211,6 +259,12 @@ export interface Order {
   buyer: UUID;
   tenant: UUID;
   status: OrderStatus;
+  /** Human label for `status`, e.g. "Delivered". */
+  status_display?: string;
+  /** True only while the order can still be cancelled (before delivery). */
+  can_cancel?: boolean;
+  /** Effective row badge — order status, or an in-flight return/exchange. */
+  display_status?: OrderDisplayStatus;
   total_amount: DecimalString;
   shipping_name: string;
   shipping_phone: string;
@@ -222,6 +276,65 @@ export interface Order {
   buyer_notes?: string;
   stripe_payment_intent_id?: string;
   items: OrderItem[];
+  delivered_at?: ISODate | null;
+  created_at: ISODate;
+  updated_at: ISODate;
+}
+
+// ─── Returns / exchanges ─────────────────────────────────────────────
+export type ReturnType = "return" | "exchange";
+
+export type ReturnReason =
+  | "defective"
+  | "wrong_item"
+  | "not_as_described"
+  | "size_fit"
+  | "no_longer_needed"
+  | "other";
+
+export type ReturnStatus =
+  | "requested"
+  | "approved"
+  | "rejected"
+  | "cancelled"
+  | "pickup_scheduled"
+  | "picked_up"
+  | "received"
+  | "refunded"
+  | "exchange_shipped"
+  | "exchange_completed";
+
+export interface ReturnEvent {
+  id: UUID;
+  from_status: string;
+  to_status: ReturnStatus;
+  note: string;
+  actor_role: string;
+  created_at: ISODate;
+}
+
+export interface ReturnRequest {
+  id: UUID;
+  order: UUID;
+  order_item: UUID;
+  product: UUID;
+  product_name: string;
+  product_image_url?: string | null;
+  buyer: UUID;
+  seller: UUID;
+  seller_name?: string | null;
+  type: ReturnType;
+  status: ReturnStatus;
+  status_display: string;
+  reason: ReturnReason;
+  reason_note: string;
+  quantity: number;
+  refund_amount: DecimalString;
+  exchange_product?: UUID | null;
+  pickup_scheduled_at?: ISODate | null;
+  resolution_note: string;
+  stripe_refund_id: string;
+  events: ReturnEvent[];
   created_at: ISODate;
   updated_at: ISODate;
 }

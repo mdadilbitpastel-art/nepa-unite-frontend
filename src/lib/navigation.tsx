@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   FileSearch,
   ClipboardList,
+  RotateCcw,
   type LucideIcon,
 } from "lucide-react";
 import type { Role } from "@/types";
@@ -75,6 +76,7 @@ export const NAV_BY_ROLE: Record<Role, NavSection[]> = {
       heading: "Sales",
       items: [
         { label: "Orders", href: "/seller/orders", icon: TruckIcon },
+        { label: "Returns", href: "/seller/returns", icon: RotateCcw },
         { label: "Revenue", href: "/seller/revenue", icon: TrendingUp },
         { label: "Analytics", href: "/seller/analytics", icon: BarChart3 },
       ],
@@ -101,6 +103,7 @@ export const NAV_BY_ROLE: Record<Role, NavSection[]> = {
       items: [
         { label: "Products", href: "/admin/products", icon: ShoppingBag },
         { label: "Orders", href: "/admin/orders", icon: Receipt },
+        { label: "Returns", href: "/admin/returns", icon: RotateCcw },
         { label: "Commissions", href: "/admin/commissions", icon: Percent },
       ],
     },

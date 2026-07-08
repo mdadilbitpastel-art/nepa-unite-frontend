@@ -13,6 +13,8 @@ import {
   XCircle,
   RefreshCw,
   CheckCircle2,
+  Store,
+  RotateCcw,
 } from "lucide-react";
 import { ProductThumb } from "@/components/shop/product-thumb";
 import { PageHeader } from "@/components/shared/page-header";
@@ -21,8 +23,12 @@ import { OrderTimeline } from "@/components/shared/order-timeline";
 import {
   OrderStatusBadge,
   PaymentStatusBadge,
+  ReturnStatusBadge,
 } from "@/components/shared/status-badge";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { ReturnRequestDialog } from "@/components/shared/return-request-dialog";
+import { ReturnTrackingDialog } from "@/components/shared/return-tracking-dialog";
+import { ReturnActivityPanel } from "@/components/shared/return-activity";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -41,7 +47,7 @@ import { paymentService } from "@/services";
 import { qk } from "@/lib/query-keys";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { downloadOrderInvoicePdf } from "@/lib/invoice-pdf";
-import type { Payment } from "@/types";
+import type { OrderItem, Payment } from "@/types";
 
 const TERMINAL_STATUSES = ["delivered", "closed", "cancelled"];
 
@@ -52,6 +58,8 @@ export default function OrderDetailPage() {
   const { data: order, isLoading, isError, refetch } = useOrder(id);
   const updateStatus = useUpdateOrderStatus();
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [returnItem, setReturnItem] = useState<OrderItem | null>(null);
+  const [trackReturnId, setTrackReturnId] = useState<string | null>(null);
   const [invoiceEnabled, setInvoiceEnabled] = useState(false);
   const [downloadingInvoice, setDownloadingInvoice] = useState(false);
   // True when we've just returned from a completed payment and are waiting for
@@ -158,7 +166,9 @@ export default function OrderDetailPage() {
       />
     );
 
-  const canCancel = !TERMINAL_STATUSES.includes(order.status);
+  // Prefer the API's authoritative flag (cancel is allowed only before
+  // delivery); fall back to the local check for older payloads.
+  const canCancel = order.can_cancel ?? !TERMINAL_STATUSES.includes(order.status);
   const isDraft = order.status === "draft";
 
   return (
@@ -285,7 +295,15 @@ export default function OrderDetailPage() {
               <CardTitle className="text-base">Order Progress</CardTitle>
             </CardHeader>
             <CardContent>
-              <OrderTimeline status={order.status} />
+              <div className="grid gap-8 sm:grid-cols-2">
+                <OrderTimeline status={order.status} />
+                <div className="sm:border-l sm:pl-8">
+                  <ReturnActivityPanel
+                    order={order}
+                    onTrack={(rid) => setTrackReturnId(rid)}
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -300,7 +318,7 @@ export default function OrderDetailPage() {
                 {order.items?.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center gap-4 py-3 first:pt-0"
+                    className="flex items-start gap-4 py-3 first:pt-0"
                   >
                     <ProductThumb
                       productId={item.product}
@@ -319,6 +337,43 @@ export default function OrderDetailPage() {
                         Qty {item.quantity} ·{" "}
                         {formatCurrency(item.unit_price)} each
                       </p>
+                      {item.seller_name && (
+                        <Link
+                          href={`/products?brand=${encodeURIComponent(item.seller_name)}`}
+                          className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-brand"
+                        >
+                          <Store className="size-3" />
+                          Sold by {item.seller_name}
+                        </Link>
+                      )}
+
+                      {/* Return / exchange action or live tracking */}
+                      {item.return_eligible ? (
+                        <button
+                          type="button"
+                          onClick={() => setReturnItem(item)}
+                          className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-brand/30 px-2.5 py-1 text-xs font-semibold text-brand transition-colors hover:bg-brand/5"
+                        >
+                          <RotateCcw className="size-3" />
+                          Return / Exchange
+                        </button>
+                      ) : item.active_return ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setTrackReturnId(item.active_return!.id)
+                          }
+                          className="mt-2 inline-flex items-center gap-2"
+                        >
+                          <ReturnStatusBadge
+                            status={item.active_return.status}
+                            label={item.active_return.status_display}
+                          />
+                          <span className="text-xs font-medium text-brand hover:underline">
+                            View tracking
+                          </span>
+                        </button>
+                      ) : null}
                     </div>
                     <p className="text-sm font-semibold">
                       {formatCurrency(
@@ -440,6 +495,21 @@ export default function OrderDetailPage() {
           )
         }
       />
+
+      {returnItem && (
+        <ReturnRequestDialog
+          item={returnItem}
+          open={!!returnItem}
+          onOpenChange={(o) => !o && setReturnItem(null)}
+        />
+      )}
+      {trackReturnId && (
+        <ReturnTrackingDialog
+          returnId={trackReturnId}
+          open={!!trackReturnId}
+          onOpenChange={(o) => !o && setTrackReturnId(null)}
+        />
+      )}
     </div>
   );
 }

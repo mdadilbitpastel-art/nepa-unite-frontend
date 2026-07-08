@@ -21,6 +21,9 @@ export const qk = {
   order: (id: string) => ["order", id] as const,
   invoice: (orderId: string) => ["invoice", orderId] as const,
 
+  returns: (params?: unknown) => ["returns", params] as const,
+  return: (id: string) => ["return", id] as const,
+
   payments: (orderId: string) => ["payments", orderId] as const,
   paymentConfig: ["payment-config"] as const,
 

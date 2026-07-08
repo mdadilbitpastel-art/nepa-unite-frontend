@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ShoppingBag, Package, ChevronRight, Search } from "lucide-react";
+import { ShoppingBag, Package, ChevronRight, Search, Store } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { ListCardSkeleton, ErrorState } from "@/components/shared/states";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { startNavProgress } from "@/components/shared/navigation-progress";
 import { ProductThumb } from "@/components/shop/product-thumb";
+import { OrderEffectiveBadge } from "@/components/shared/status-badge";
 import { useOrders } from "@/features/orders/use-orders";
 import { formatCurrency, formatDate, titleCase, cn } from "@/lib/utils";
 import type { Order, OrderStatus } from "@/types";
@@ -205,6 +206,15 @@ export default function BuyerOrdersPage() {
 function OrderRow({ order }: { order: Order }) {
   const itemCount = order.items?.length ?? 0;
   const href = `/account/orders/${order.id}`;
+  const sellerNames = Array.from(
+    new Set((order.items ?? []).map((i) => i.seller_name).filter(Boolean)),
+  );
+  const sellerLabel =
+    sellerNames.length === 1
+      ? sellerNames[0]
+      : sellerNames.length > 1
+        ? `${sellerNames.length} sellers`
+        : null;
 
   return (
     <Link
@@ -228,8 +238,17 @@ function OrderRow({ order }: { order: Order }) {
           {formatDate(order.created_at)} · {itemCount}{" "}
           {itemCount === 1 ? "item" : "items"}
         </p>
+        {sellerLabel && (
+          <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <Store className="size-3" />
+            Sold by {sellerLabel}
+          </p>
+        )}
         <div className="mt-2">
-          <StatusPill status={order.status} />
+          <OrderEffectiveBadge
+            order={order}
+            fallback={<StatusPill status={order.status} />}
+          />
         </div>
       </div>
 

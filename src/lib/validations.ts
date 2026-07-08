@@ -54,6 +54,16 @@ export const productSchema = z.object({
   inventory_count: z.coerce.number().int().min(0, "Cannot be negative"),
   min_order_qty: z.coerce.number().int().min(1, "Minimum is 1"),
   category: z.string().optional(),
+  // Return / exchange policy (seller-set).
+  is_returnable: z.boolean().default(true),
+  return_window_days: z.coerce
+    .number()
+    .int()
+    .min(0, "Cannot be negative")
+    .max(365, "Too long")
+    .default(7),
+  is_exchangeable: z.boolean().default(true),
+  return_policy_note: z.string().optional(),
 }).refine(
   (v) => !v.mrp || parseFloat(v.mrp) >= parseFloat(v.price),
   { message: "MRP cannot be lower than price", path: ["mrp"] },
@@ -90,3 +100,18 @@ export const reviewSchema = z.object({
   title: z.string().min(1, "Title is required"),
   body: z.string().min(1, "Review body is required"),
 });
+
+export const returnRequestSchema = z.object({
+  type: z.enum(["return", "exchange"]),
+  reason: z.enum([
+    "defective",
+    "wrong_item",
+    "not_as_described",
+    "size_fit",
+    "no_longer_needed",
+    "other",
+  ]),
+  reason_note: z.string().optional(),
+  quantity: z.coerce.number().int().min(1, "Minimum is 1"),
+});
+export type ReturnRequestInput = z.infer<typeof returnRequestSchema>;

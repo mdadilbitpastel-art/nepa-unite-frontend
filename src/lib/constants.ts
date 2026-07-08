@@ -1,4 +1,10 @@
-import type { Role, OrderStatus, PaymentStatus, CommissionStatus } from "@/types";
+import type {
+  Role,
+  OrderStatus,
+  PaymentStatus,
+  CommissionStatus,
+  ReturnStatus,
+} from "@/types";
 
 export const APP_NAME = "NEPA Unite";
 export const APP_TAGLINE = "The B2B marketplace for Northeastern Pennsylvania";
@@ -76,6 +82,42 @@ export const ORDER_LIFECYCLE: OrderStatus[] = [
   "shipped",
   "delivered",
   "closed",
+];
+
+export const RETURN_STATUS_VARIANT: Record<
+  ReturnStatus,
+  "default" | "info" | "success" | "warning" | "danger" | "muted" | "teal"
+> = {
+  requested: "warning",
+  approved: "info",
+  rejected: "danger",
+  cancelled: "muted",
+  pickup_scheduled: "info",
+  picked_up: "teal",
+  received: "teal",
+  refunded: "success",
+  exchange_shipped: "teal",
+  exchange_completed: "success",
+};
+
+/** Ordered return/exchange lifecycles for the status tracker. */
+export const RETURN_LIFECYCLE_RETURN: ReturnStatus[] = [
+  "requested",
+  "approved",
+  "pickup_scheduled",
+  "picked_up",
+  "received",
+  "refunded",
+];
+
+export const RETURN_LIFECYCLE_EXCHANGE: ReturnStatus[] = [
+  "requested",
+  "approved",
+  "pickup_scheduled",
+  "picked_up",
+  "received",
+  "exchange_shipped",
+  "exchange_completed",
 ];
 
 export const DEFAULT_PAGE_SIZE = 20;
