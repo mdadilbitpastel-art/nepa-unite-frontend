@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +43,7 @@ export function ReturnRequestDialog({
   onOpenChange: (o: boolean) => void;
 }) {
   const create = useCreateReturn();
+  const router = useRouter();
   const canReturn = item.is_returnable ?? true;
   const canExchange = item.is_exchangeable ?? false;
 
@@ -63,7 +65,14 @@ export function ReturnRequestDialog({
         reason_note: note,
         quantity: Math.min(Math.max(1, quantity), maxQty),
       },
-      { onSuccess: () => onOpenChange(false) },
+      {
+        onSuccess: (rr) => {
+          onOpenChange(false);
+          // Land the buyer on the order page, where the new request now shows
+          // in the Returns & Exchanges panel and can be tracked.
+          router.push(`/account/orders/${rr.order}`);
+        },
+      },
     );
   };
 

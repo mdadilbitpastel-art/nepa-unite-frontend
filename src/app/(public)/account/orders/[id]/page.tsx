@@ -47,7 +47,7 @@ import { paymentService } from "@/services";
 import { qk } from "@/lib/query-keys";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { downloadOrderInvoicePdf } from "@/lib/invoice-pdf";
-import type { OrderItem, Payment } from "@/types";
+import type { OrderItem, Payment, ReturnStatus } from "@/types";
 
 const TERMINAL_STATUSES = ["delivered", "closed", "cancelled"];
 
@@ -294,15 +294,27 @@ export default function OrderDetailPage() {
             <CardHeader>
               <CardTitle className="text-base">Order Progress</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid gap-8 sm:grid-cols-2">
-                <OrderTimeline status={order.status} />
-                <div className="sm:border-l sm:pl-8">
-                  <ReturnActivityPanel
-                    order={order}
-                    onTrack={(rid) => setTrackReturnId(rid)}
-                  />
-                </div>
+            <CardContent className="space-y-6">
+              <OrderTimeline
+                status={order.status}
+                returnKind={
+                  order.display_status &&
+                  order.display_status.kind !== "order"
+                    ? order.display_status.kind
+                    : undefined
+                }
+                returnStatus={
+                  order.display_status &&
+                  order.display_status.kind !== "order"
+                    ? (order.display_status.code as ReturnStatus)
+                    : undefined
+                }
+              />
+              <div className="border-t pt-6">
+                <ReturnActivityPanel
+                  order={order}
+                  onTrack={(rid) => setTrackReturnId(rid)}
+                />
               </div>
             </CardContent>
           </Card>
